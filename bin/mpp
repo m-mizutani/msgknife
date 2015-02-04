@@ -6,8 +6,8 @@ require 'pp'
 # MsgPack Prety Print
 class MPP < Msgknife::Stream
   def setup(argv); end
-  def exec(obj)
-    pp obj
+  def recv(obj, ts, tag)
+    write_stream(obj, ts, tag)
   end
 end
 

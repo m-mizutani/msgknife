@@ -9,7 +9,8 @@ module Msgknife
     def initialize
       @out_encode = false
       @optpsr = OptionParser.new
-      @optpsr.on('-m', 'output as msgpack encode') { |v| @out_encode = true }
+      @optpsr.on('-m', 'output as msgpack encode') { |v| @out_encode = v }
+      @optpsr.on('-F', 'input as fluentd format')  { |v| @in_fluentd = v }
       @argv = []
     end
 
@@ -30,7 +31,13 @@ module Msgknife
     def read_io(io)
       u = MessagePack::Unpacker.new(io)
       begin
-        u.each {|obj| exec(obj) }
+        u.each {|obj|
+          if @in_fluentd
+            recv(obj[2], obj[1], obj[0])
+          else
+            recv(obj, nil, nil)
+          end
+        }
       rescue EOFError
         # ignore
       rescue Interrupt
@@ -62,11 +69,19 @@ module Msgknife
       end
     end
 
-    def write_stream(obj)
+    def write_stream(obj, ts=nil, tag=nil)
       if @out_encode == false
-        pp obj
+        if ts.nil? and tag.nil?
+          pp obj
+        else
+          pp [tag, ts, obj]
+        end
       else
-        STDOUT.write(obj.to_msgpack)
+        if ts.nil? and tag.nil?
+          STDOUT.write(obj.to_msgpack)
+        else
+          STDOUT.write([tag, ts, obj].to_msgpack)
+        end
       end
       rescue Errno::EPIPE => e ;      
     end
@@ -76,7 +91,7 @@ module Msgknife
       raise 'setup(argv) must be implemented' if argv.size > 0
     end
 
-    def exec(obj)
+    def recv(obj, ts, tag)
       raise 'exec(obj) must be implemented'
     end
 
