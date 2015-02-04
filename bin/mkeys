@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MPP < Msgknife::Stream
+  def initialize
+    super
+
+    @optpsr.on('-t', 'tag mode') {|v| @tag_mode = v }
+  end
+  
+  def setup(argv)
+    @key_map = Hash.new {|h1,k1| h1[k1] = 0}
+  end
+
+  def recv(obj, ts, tag)
+    if @tag_mode
+      @key_map[tag] += 1 unless tag.nil?
+    else
+      obj.each do |k,v| @key_map[k] += 1; end
+    end
+  end
+
+  def teardown
+    write_stream(@key_map);
+  end
+end
+
+ins = MPP.new()
+ins.run(ARGV)
