@@ -8,9 +8,9 @@ Gem::Specification.new do |spec|
   spec.version       = Msgknife::VERSION
   spec.authors       = ["Masayoshi Mizutani"]
   spec.email         = ["mizutani@sfc.wide.ad.jp"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ""
+  spec.summary       = %q{MsgKnife: Utilities of MessagePack format file and stream}
+  spec.description   = %q{MsgKnife makes easy to view, check and analyze MessagePack format file and stream such as Fluentd data}
+  spec.homepage      = "https://github.com/m-mizutani/msgknife"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0")
