@@ -1,0 +1,146 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+require 'msgknife'
+require 'pp'
+require 'time'
+require 'msgpack'
+require 'json'
+
+# MsgPack Prety Print
+class MHeatMap < Msgknife::Stream
+  BLANK = ' '
+  BARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+
+  def initialize
+    super
+
+    # Set options
+    @ts_key = 'ts'
+    @optpsr.on('-t VAL', 'timestamp key name') { |v| @ts_key = v }
+
+    @count_key = nil
+    @optpsr.on('-c VAL', 'key name to sum numbers') { |v| @count_key = v }
+
+    @width = 80 - 32
+    @optpsr.on('-w VAL', 'width') { |v| @width = v.to_i }
+
+    @relative = false
+    @optpsr.on('-r', 'relative time') { |v| @relative = true }
+
+    @output_fmt = 'console'
+    @optpsr.on('-j', 'output as json') { |v| @output_fmt = 'json' }
+    @optpsr.on('-m', 'output as msgpack') { |v| @output_fmt = 'msgpack' }
+
+    # Set internval parameters
+    @key = nil
+    @ts_min = nil
+    @ts_max = nil
+    @rows = Hash.new {|h,k| h[k] = Array.new}
+  end
+
+  def setup(argv)
+    @key = argv[0]
+  end
+
+  def add_ts(key, ts, val)
+
+    if key.instance_of? Array
+      key.each { |v| add_ts(v, ts, val) }
+    elsif key.instance_of? Hash
+      key.each { |k,v| add_ts(v, ts, val) }
+    elsif key.instance_of? String
+      @rows[key] << [ts, val]
+    elsif key.instance_of? Fixnum
+      @rows[key.to_s] << [ts, val]
+    end
+  end
+
+  def recv(msg, ts, tag)
+    @ts_min = ts if @ts_min.nil? or ts < @ts_min
+    @ts_max = ts if @ts_max.nil? or @ts_max < ts
+
+    if @count_key.nil?
+      add_ts(msg[@key], ts, 1)
+    else
+      add_ts(msg[@key], ts, msg[@count_key]) if msg.has_key? @count_key
+    end      
+  end
+
+  def output_console(obj)
+    STDOUT.write(sprintf("%28s | %s", "", obj['cols'][0]))    
+    puts
+    STDOUT.write(sprintf("%28s | %s|", "-" * 28, 
+                         "-" * @width))
+    puts
+
+    obj['rows'].each do |k, row|
+      label = sprintf("%28s | ", k[0..31])
+      STDOUT.write(label)
+      
+      v_max = row['row'].max
+
+      row['row'].each do |v|
+        if v == 0
+          STDOUT.write(BLANK)
+        else
+          bi = (v / v_max) * BARS.size
+          bi = BARS.size - 1 if BARS.size <= bi
+          STDOUT.write(BARS[bi])
+        end
+      end
+      STDOUT.write('|')
+      puts
+    end
+  end
+  
+  def teardown
+    dur_ts = @ts_max - @ts_min
+    ts_unit = dur_ts / @width
+
+    cols = Array.new(@width)
+    (0..@width-1).each do |i|
+      if @relative
+        ts = ts_unit * i
+        cols[i] = sprintf("%02d:%02d:%02d", (ts / 3600).to_i,
+                           ((ts % 3600) / 60).to_i, (ts % 60))
+      else
+        dt = Time.at(@ts_min + ts_unit * i)
+        cols[i] = dt.to_s.split(' ')[0..1].join(' ')
+      end
+    end
+    
+
+    data_map = Hash.new {|h,k| h[k] = {
+        'row' => Array.new(@width, 0),
+        'max' => 0,
+      }}
+    @rows.each do |k, ts_list|
+      ts_list.each do |ts, val|
+        idx = ((ts - @ts_min) / ts_unit).to_i
+        idx = @width - 1 if idx >= @width
+        data_map[k]['row'][idx] += val
+        if data_map[k]['max'] < data_map[k]['row'][idx]
+          data_map[k]['max'] = data_map[k]['row'][idx]
+        end
+      end
+    end
+
+    obj = {
+      'cols' => cols,
+      'rows' => data_map,
+      'ts_max' => @ts_max,
+      'ts_min' => @ts_min,
+    }
+
+    # write_stream(obj)
+    case @output_fmt
+    when 'console'; output_console(obj)
+    when 'json'; STDOUT.write(obj.to_json)
+    when 'msgpack'; STDOUT.write(obj.to_msgpack)
+    end
+  end
+end
+
+ins = MHeatMap.new()
+ins.run(ARGV, 0..0)
