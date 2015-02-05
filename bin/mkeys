@@ -4,7 +4,7 @@ require 'msgknife'
 require 'pp'
 
 # MsgPack Prety Print
-class MPP < Msgknife::Stream
+class MKEYS < Msgknife::Stream
   def initialize
     super
 
@@ -33,5 +33,5 @@ class MPP < Msgknife::Stream
   end
 end
 
-ins = MPP.new()
+ins = MKEYS.new()
 ins.run(ARGV)
