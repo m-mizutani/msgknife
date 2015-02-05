@@ -36,8 +36,8 @@ class MEntropy < Msgknife::Stream
       sum = (m.inject(0){|s,v| s + v[1]}).to_f
       sump = 0.0
       m.each do |val, count|
-        p = count.to_f / sum
-        sump += p * Math.log2(p)
+        prob = count.to_f / sum
+        sump += prob * Math.log2(prob)
       end
       res[k] = -sump
       maxc = sum if maxc < sum
