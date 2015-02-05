@@ -68,14 +68,14 @@ class MHeatMap < Msgknife::Stream
   end
 
   def output_console(obj)
-    STDOUT.write(sprintf("%28s | %s", "", obj['cols'][0]))    
+    STDOUT.write(sprintf("%30s | %s", "", obj['cols'][0]))    
     puts
-    STDOUT.write(sprintf("%28s | %s|", "-" * 28, 
+    STDOUT.write(sprintf("%30s | %s|", "-" * 28, 
                          "-" * @width))
     puts
 
     obj['rows'].each do |k, row|
-      label = sprintf("%28s | ", k[0..31])
+      label = sprintf("%30s | ", k[0..28])
       STDOUT.write(label)
       
       v_max = row['row'].max
