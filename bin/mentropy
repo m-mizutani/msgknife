@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MEntropy < Msgknife::Stream
+  def initialize
+    super
+
+    @optpsr.on('-t', 'tag mode') {|v| @tag_mode = v }
+    @optpsr.on('-N', 'ignore if value is nil') {|v| @ignore_nil = v }
+    @optpsr.on('-r', 'show as ratio of maximum') {|v| @ratio = v }
+  end
+  
+  def setup(argv)
+    @key_map = Hash.new {|h1,k1| h1[k1] = Hash.new{|h2,k2| h2[k2] = 0}}
+  end
+
+  def recv(obj, ts, tag)
+    if @tag_mode
+      @key_map['tag'][tag] += 1 unless tag.nil?
+    else
+      obj.each do |k,v|
+        if !(@ignore_nil) or !(v.nil?)
+          @key_map[k][v] += 1
+        end
+      end
+    end
+  end
+
+  def teardown
+    res = {}
+    maxc = 0
+    @key_map.each do |k, m|
+      sum = (m.inject(0){|s,v| s + v[1]}).to_f
+      sump = 0.0
+      m.each do |val, count|
+        p = count.to_f / sum
+        sump += p * Math.log2(p)
+      end
+      res[k] = -sump
+      maxc = sum if maxc < sum
+    end
+
+    maxp = -(Math.log2(1.0/maxc))
+    if @ratio
+      keys = res.keys
+      keys.each { |k| res[k] = res[k] / maxp }
+    end        
+        
+    write_stream(res);
+  end
+end
+
+ins = MEntropy.new()
+ins.run(ARGV)
