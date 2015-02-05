@@ -9,6 +9,7 @@ class MPP < Msgknife::Stream
     super
 
     @optpsr.on('-t', 'tag mode') {|v| @tag_mode = v }
+    @optpsr.on('-N', 'ignore if value is nil') {|v| @ignore_nil = v }
   end
   
   def setup(argv)
@@ -19,7 +20,11 @@ class MPP < Msgknife::Stream
     if @tag_mode
       @key_map[tag] += 1 unless tag.nil?
     else
-      obj.each do |k,v| @key_map[k] += 1; end
+      obj.each do |k,v|
+        if !(@ignore_nil) or !(v.nil?)
+          @key_map[k] += 1
+        end
+      end
     end
   end
 

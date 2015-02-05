@@ -1,6 +1,7 @@
 require "msgknife/version"
 require 'msgpack'
 require 'optparse'
+require 'time'
 
 module Msgknife
   class Stream
@@ -11,6 +12,7 @@ module Msgknife
       @optpsr = OptionParser.new
       @optpsr.on('-m', 'output as msgpack encode') { |v| @out_encode = v }
       @optpsr.on('-F', 'input as fluentd format')  { |v| @in_fluentd = v }
+      @optpsr.on('-T VAL', 'key of timestamp in message')  { |v| @ts_key = v }
       @argv = []
     end
 
@@ -35,7 +37,23 @@ module Msgknife
           if @in_fluentd
             recv(obj[2], obj[1], obj[0])
           else
-            recv(obj, nil, nil)
+            if @ts_key.nil? or !(obj.key?(@ts_key))
+              recv(obj, nil, nil)
+            else
+              ts = nil
+              ts_val = obj[@ts_key]
+              case ts_val
+              when String
+                dt = Time.parse(ts_val) rescue nil
+                ts = dt.to_i
+              when Fixnum
+                ts = ts_val
+              when Float
+                ts = ts_val.to_i
+              end
+                  
+              recv(obj, ts, nil)
+            end
           end
         }
       rescue EOFError
