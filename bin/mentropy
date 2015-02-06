@@ -9,7 +9,6 @@ class MEntropy < Msgknife::Stream
     super
 
     @optpsr.on('-t', 'tag mode') {|v| @tag_mode = v }
-    @optpsr.on('-N', 'ignore if value is nil') {|v| @ignore_nil = v }
     @optpsr.on('-r', 'show as ratio of maximum') {|v| @ratio = v }
   end
   

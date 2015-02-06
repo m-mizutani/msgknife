@@ -13,6 +13,7 @@ module Msgknife
       @optpsr.on('-m', 'output as msgpack encode') { |v| @out_encode = v }
       @optpsr.on('-F', 'input as fluentd format')  { |v| @in_fluentd = v }
       @optpsr.on('-T VAL', 'key of timestamp in message')  { |v| @ts_key = v }
+      @optpsr.on('-N', 'ignore if value is nil') {|v| @ignore_nil = v }
       @argv = []
     end
 

@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MPP < Msgknife::Stream
+  def setup(argv)
+    @key = argv[0]
+  end
+  def recv(obj, ts, tag)
+    if obj.key?(@key) and (!@ignore_nil or !(obj[@key].nil?))
+      write_stream({@key => obj[@key]}, ts, tag)
+    end
+  end
+end
+
+ins = MPP.new()
+ins.run(ARGV, 0..0)
