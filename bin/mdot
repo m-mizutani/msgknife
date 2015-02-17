@@ -1,0 +1,47 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MDot < Msgknife::Stream
+  def initialize
+    super
+    @optpsr.on('-N', 'skip if value is nil') {|v| @skip_nil = v }
+    @optpsr.on('-d', 'output as dot format') {|v| @out_dot = v }
+  end
+  
+  def setup(argv)
+    @key1 = argv[0]
+    @key2 = argv[1]
+    @dot_map = Hash.new{|h1,k1| h1[k1] = Hash.new{|h2,k2| h2[k2] = 0}}
+  end
+
+  def recv(obj, ts, tag)
+    if obj.key?(@key1) and obj.key?(@key2)
+      return if @skip_nil and (obj[@key1].nil? or obj[@key2].nil?)
+      @dot_map[obj[@key1]][obj[@key2]] += 1
+    end
+  end
+
+  def teardown
+    if @out_dot
+      puts "digraph mdot {"
+      @dot_map.each do |k1, dst_map|
+        dst_map.each do |k2, count|
+          puts "  \"#{k1}\" -> \"#{k2}\" [label=\"#{count}\"];"
+        end
+      end
+      puts "}"
+    else
+      @dot_map.each do |k1, dst_map|
+        dst_map.each do |k2, count|
+          write_stream({'src'=>k1, 'dst'=>k2, 'count'=>count})
+        end
+      end
+    end
+  end
+end
+
+ins = MDot.new()
+ins.run(ARGV, 0..1)
