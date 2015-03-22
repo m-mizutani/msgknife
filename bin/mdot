@@ -1,0 +1,120 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+require 'set'
+require 'digest/md5'
+
+# MsgPack Prety Print
+class MDot < Msgknife::Stream
+  class Node
+    attr_reader :key, :hkey, :fwd_link, :fwd_count, :back_link, :category
+    
+    def initialize(label)
+      label = '(nil)' if label.nil?
+      @key = label
+      @hkey = Digest::MD5.hexdigest(label)
+      @fwd_link = {}
+      @fwd_count = Hash.new{|h,k| h[k] = 0}
+      @back_link = {}
+    end
+
+    def set_cat(cat)
+      @category = cat
+    end
+    
+    def attach(tgt)
+      @fwd_link[tgt.key] = tgt
+      @fwd_count[tgt.key] += 1
+      tgt.attach_back(self)
+    end
+
+    def attach_back(tgt)
+      @back_link[tgt.key] = tgt
+    end
+
+    def set(memo=Set.new)
+      if memo.include?(@key)
+        return memo
+      else
+        memo.add(@key)
+        @fwd_link.each do |k,n|
+          memo = n.set(memo) unless memo.include?(k)
+        end
+        @back_link.each do |k,n|
+          memo = n.set(memo) unless memo.include?(k)
+        end
+      end
+      return memo
+    end
+  end
+  
+  def initialize
+    super
+    @node_map = Hash.new{|h,k| h[k] = Node.new(k)}
+    @optpsr.on('-M val', 'size of minimum graph size') {|v| @min_size = v.to_i}
+    @optpsr.on('-N', 'skip if value is nil') {|v| @skip_nil = v }
+    @optpsr.on('-d', 'output as dot format') {|v| @out_dot = v }
+  end
+  
+  def setup(argv)
+    @key1 = argv[0]
+    @key2 = argv[1]
+  end
+
+  def recv(obj, ts, tag)
+    if obj.key?(@key1) and obj.key?(@key2)
+      return if @skip_nil and (obj[@key1].nil? or obj[@key2].nil?)
+      n1 = @node_map[obj[@key1]]
+      n2 = @node_map[obj[@key2]]
+      n1.set_cat(0)
+      n2.set_cat(1)
+      n1.attach(n2)
+    end
+  end
+
+  def teardown
+    ignore_set = Set.new
+    unless @min_size.nil?
+      @node_map.each do |key, node|
+        next if ignore_set.include?(key)
+        m = node.set
+        m.each {|n| ignore_set.add(n)} if m.size < @min_size
+      end
+    end
+    
+    if @out_dot
+      puts "digraph mdot {"
+      @node_map.each do |key, node|
+        next if ignore_set.include?(node.key)
+        key = node.key.gsub('"', '\"')
+        case node.category
+        when 0; color = '#fbeac1'
+        when 1; color = '#ecac12'
+        end
+        puts "  \"#{node.hkey}\" [label=\"#{key}\" color=\"#{color}\" style=\"filled\"];"
+      end
+
+      @node_map.each do |key1, node1|
+        next if ignore_set.include?(key1)
+        node1.fwd_link.each do |key2, node2|
+          count = node1.fwd_count[key2]
+          puts "  \"#{node1.hkey}\" -> \"#{node2.hkey}\" [label=\"#{count}\" len=2.5];"
+        end
+      end
+      puts "}"
+      
+    else
+      @node_map.each do |key1, node1|
+        next if ignore_set.include?(key1)
+        node1.fwd_link.each do |key2, node2|
+          count = node1.fwd_count[key2]
+          write_stream({'src'=>key1, 'dst'=>key2, 'count'=>count})
+        end
+      end
+    end
+  end
+end
+
+ins = MDot.new()
+ins.run(ARGV, 0..1)

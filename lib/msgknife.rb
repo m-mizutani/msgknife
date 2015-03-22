@@ -2,6 +2,7 @@ require "msgknife/version"
 require 'msgpack'
 require 'optparse'
 require 'time'
+require 'pp'
 
 module Msgknife
   class Stream
@@ -88,18 +89,18 @@ module Msgknife
       end
     end
 
-    def write_stream(obj, ts=nil, tag=nil)
+    def write_stream(obj, ts=nil, tag=nil, io=STDOUT)
       if @out_encode == false
         if ts.nil? and tag.nil?
-          pp obj
+          PP.pp(obj, io)
         else
-          pp [tag, ts, obj]
+          PP.pp([tag, ts, obj], io)
         end
       else
         if ts.nil? and tag.nil?
-          STDOUT.write(obj.to_msgpack)
+          io.write(obj.to_msgpack)
         else
-          STDOUT.write([tag, ts, obj].to_msgpack)
+          io.write([tag, ts, obj].to_msgpack)
         end
       end
       rescue Errno::EPIPE => e ;      

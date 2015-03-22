@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'fileutils'
+
+# MsgPack Prety Print
+class MGrep < Msgknife::Stream
+  def initialize
+    super
+    @optpsr.on('-a', 'append mode') { |v| @append = v }
+    @optpsr.on('-o VAL', 'output directory') { |v| @outdir = v }
+  end
+  
+  def setup(argv)
+    @key = argv[0]
+    @fd_map = Hash.new
+    if !(@outdir.nil?) and !(File.exists?(@outdir))
+      FileUtils.mkdir_p @outdir
+    end
+  end
+
+  def recv(obj, ts, tag)
+    val = obj.has_key?(@key) ? obj[@key] : 'unknown'
+    unless @fd_map.has_key?(val)
+      mode = @append ? 'wb+' : 'wb'
+      fpath = (val.nil?) ? 'nil.msg' : val + '.msg'
+      puts fpath
+      fpath = File.join(@outdir, fpath) unless @outdir.nil?
+      @fd_map[val] = File.open(fpath, mode)
+    end
+
+    write_stream(obj, ts, tag, @fd_map[val])
+  end
+end
+
+ins = MGrep.new()
+ins.run(ARGV, 0..0)
