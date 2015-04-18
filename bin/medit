@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MPP < Msgknife::Stream
+  def setup(argv); end
+  def recv(obj, ts, tag)
+    write_stream(obj, ts, tag)
+  end
+end
+
+ins = MPP.new()
+ins.run(ARGV)
