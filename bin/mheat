@@ -19,6 +19,11 @@ class MHeatMap < Msgknife::Stream
     @ts_key = 'ts'
     @optpsr.on('-t VAL', 'timestamp key name') { |v| @ts_key = v }
 
+    @ts_start = nil
+    @ts_end   = nil
+    @optpsr.on('-s VAL', 'timestamp of start') {|v| @ts_start = v.to_i }
+    @optpsr.on('-e VAL', 'timestamp of end')   {|v| @ts_end   = v.to_i }
+
     @count_key = nil
     @optpsr.on('-c VAL', 'key name to sum numbers') { |v| @count_key = v }
 
@@ -105,6 +110,10 @@ class MHeatMap < Msgknife::Stream
   end
   
   def teardown
+    @ts_max = @ts_end   unless @ts_end.nil?
+    @ts_min = @ts_start unless @ts_start.nil?
+
+    raise 'start timestamp should be less than end timestamp' if @ts_max < @ts_min
     dur_ts = @ts_max - @ts_min
     ts_unit = dur_ts / @width
 
@@ -127,11 +136,13 @@ class MHeatMap < Msgknife::Stream
       }}
     @rows.each do |k, ts_list|
       ts_list.each do |ts, val|
-        idx = ((ts - @ts_min) / ts_unit).to_i
-        idx = @width - 1 if idx >= @width
-        data_map[k]['row'][idx] += val
-        if data_map[k]['max'] < data_map[k]['row'][idx]
-          data_map[k]['max'] = data_map[k]['row'][idx]
+        if @ts_min <= ts and ts <= @ts_max
+          idx = ((ts - @ts_min) / ts_unit).to_i
+          idx = @width - 1 if idx >= @width
+          data_map[k]['row'][idx] += val
+          if data_map[k]['max'] < data_map[k]['row'][idx]
+            data_map[k]['max'] = data_map[k]['row'][idx]
+          end
         end
       end
     end
