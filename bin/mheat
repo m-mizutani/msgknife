@@ -68,7 +68,17 @@ class MHeatMap < Msgknife::Stream
   end
 
   def output_console(obj)
-    STDOUT.write(sprintf("%30s | %s", "", obj['cols'][0]))    
+    ep = obj['cols'].size - 1
+    dt1_len = obj['cols'][0].size
+    dt2_len = obj['cols'][ep].size
+    sp_len  = @width - (dt1_len + dt2_len) - 2
+    if sp_len > 0
+      STDOUT.write(sprintf("%30s | %s %s %s|" , "", obj['cols'][0], " " * sp_len,
+                           obj['cols'][ep]))
+    else
+      STDOUT.write(sprintf("%30s | %s" , "", obj['cols'][0]))
+    end
+
     puts
     STDOUT.write(sprintf("%30s | %s|", "-" * 28, 
                          "-" * @width))
