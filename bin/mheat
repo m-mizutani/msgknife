@@ -6,6 +6,7 @@ require 'pp'
 require 'time'
 require 'msgpack'
 require 'json'
+require 'terminfo'
 
 # MsgPack Prety Print
 class MHeatMap < Msgknife::Stream
@@ -27,7 +28,7 @@ class MHeatMap < Msgknife::Stream
     @count_key = nil
     @optpsr.on('-c VAL', 'key name to sum numbers') { |v| @count_key = v }
 
-    @width = 80 - 32
+    @width = TermInfo.screen_size[1] - 35
     @optpsr.on('-w VAL', 'width') { |v| @width = v.to_i }
 
     @relative = false
