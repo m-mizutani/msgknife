@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
+
 require "msgknife/version"
 require 'msgpack'
 require 'optparse'
 require 'time'
 require 'pp'
+require 'json'
 
 module Msgknife
   class Stream
@@ -11,11 +14,14 @@ module Msgknife
     def initialize
       @out_encode = false
       @optpsr = OptionParser.new
-      @optpsr.on('-m', 'output as msgpack encode') { |v| @out_encode = v }
       @optpsr.on('-F', 'input as fluentd format')  { |v| @in_fluentd = v }
       @optpsr.on('-T VAL', 'key of timestamp in message')  { |v| @ts_key = v }
       @optpsr.on('-N', 'ignore if value is nil') {|v| @ignore_nil = v }
       @argv = []
+      
+      @output_fmt = 'console'
+      @optpsr.on('-j', 'output as json') { |v| @output_fmt = 'json' }
+      @optpsr.on('-m', 'output as msgpack') { |v| @output_fmt = 'msgpack' }
     end
 
     def run(cmd_argv, range = nil)
@@ -90,20 +96,16 @@ module Msgknife
     end
 
     def write_stream(obj, ts=nil, tag=nil, io=STDOUT)
-      if @out_encode == false
-        if ts.nil? and tag.nil?
-          PP.pp(obj, io)
-        else
-          PP.pp([tag, ts, obj], io)
+      msg =(ts.nil? and tag.nil?) ? obj : [tag, ts, obj]
+
+      begin
+        case @output_fmt
+        when 'console'; PP.pp(msg, io);
+        when 'json';    JSON.dump(msg, io);
+        when 'msgpack'; io.write(msg.to_msgpack);
         end
-      else
-        if ts.nil? and tag.nil?
-          io.write(obj.to_msgpack)
-        else
-          io.write([tag, ts, obj].to_msgpack)
-        end
+      rescue Errno::EPIPE => e ;
       end
-      rescue Errno::EPIPE => e ;      
     end
 
 

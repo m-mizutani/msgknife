@@ -34,10 +34,6 @@ class MHeatMap < Msgknife::Stream
     @relative = false
     @optpsr.on('-r', 'relative time') { |v| @relative = true }
 
-    @output_fmt = 'console'
-    @optpsr.on('-j', 'output as json') { |v| @output_fmt = 'json' }
-    @optpsr.on('-m', 'output as msgpack') { |v| @output_fmt = 'msgpack' }
-
     # Set internval parameters
     @key = nil
     @ts_min = nil

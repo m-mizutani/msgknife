@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+class MHead < Msgknife::Stream
+  def initialize
+    super
+    @num = 20
+    @json = false
+    @optpsr.on('-n VAL', 'number of message to show') {|v| @num = v.to_i }
+  end
+  
+  def setup(argv)
+    @count = 0
+  end
+  def recv(obj, ts, tag)
+    if @count < @num
+      write_stream(obj, ts, tag)
+    else
+      return false
+    end
+    @count += 1
+  end
+  def teardown
+  end
+end
+
+MHead.new.run(ARGV)
+
