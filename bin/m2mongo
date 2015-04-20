@@ -1,0 +1,29 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'mongo'
+
+class M2Mongo < Msgknife::Stream
+  def initialize
+    super
+    @rec_id = nil
+    @optpsr.on('-i VAL', 'specify _id') {|v| @rec_id = v }
+  end
+  
+  def setup(argv)
+    @dbname = argv[0]
+    @colname = argv[1]
+  end
+  
+  def recv(obj, ts, tag)
+    obj['_id'] = @rec_id unless @rec_id.nil?
+    client = Mongo::Client.new([ '127.0.0.1:27017' ], :database => @dbname)
+    client[@colname.intern].insert_one(obj)
+  end
+  
+  def teardown
+  end
+end
+
+M2Mongo.new.run(ARGV, 0..1)
+

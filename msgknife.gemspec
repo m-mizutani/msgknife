@@ -22,5 +22,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_dependency "msgpack", '~> 0.5'
   spec.add_dependency "ruby-terminfo"
-  spec.add_dependency "diff-lcs"  
+  spec.add_dependency "mongo"  
 end
