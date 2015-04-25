@@ -2,23 +2,29 @@
 
 require 'msgknife'
 require 'mongo'
+require 'pp'
 
 class M2Mongo < Msgknife::Stream
   def initialize
     super
-    @rec_id = nil
-    @optpsr.on('-i VAL', 'specify _id') {|v| @rec_id = v }
+    @host = '127.0.0.1'
+    @port = 27017
+    @time_key = nil
+    @optpsr.on('-H VAL', 'mongodb hostname') {|v| @host = v}
+    @optpsr.on('-p VAL', 'mongodb port') {|v| @port = v.to_i}
+    @optpsr.on('-t VAL', 'time key if fluentd format') {|v| @time_key = v}
   end
   
   def setup(argv)
     @dbname = argv[0]
     @colname = argv[1]
+    dst = "#{@host}:#{@port}"
+    @client = Mongo::Client.new([ dst ], :database => @dbname)
   end
   
   def recv(obj, ts, tag)
-    obj['_id'] = @rec_id unless @rec_id.nil?
-    client = Mongo::Client.new([ '127.0.0.1:27017' ], :database => @dbname)
-    client[@colname.intern].insert_one(obj)
+    obj[@time_key] = ts unless @time_key.nil?
+    @client[@colname.intern].insert_one(obj)
   end
   
   def teardown

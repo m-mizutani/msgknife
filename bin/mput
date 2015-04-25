@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+class MPut < Msgknife::Stream
+  def setup(argv)
+    @key = argv[0]
+    @val = argv[1]
+  end
+  
+  def recv(obj, ts, tag)
+    obj[@key] = @val
+    write_stream(obj, ts ,tag)
+  end
+end
+
+MPut.new.run(ARGV, 0..1)
+
