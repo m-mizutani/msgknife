@@ -1,0 +1,33 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+class MCount < Msgknife::Stream
+  def initialize
+    super
+    @key = nil
+    @optpsr.on('-k VAL', 'key') {|v| @key = v }
+    @count_map = Hash.new{|h,k| h[k] = 0}
+    @total = 0
+  end
+  
+  def setup(argv)
+  end
+  
+  def recv(obj, ts, tag)
+    @total += 1
+    if not @key.nil? and obj.include?(@key)
+      @count_map[obj[@key]] += 1
+    end
+  end
+  
+  def teardown
+    msg = {'total': @total}
+    msg['count'] = @count_map unless @key.nil?
+    write_stream(msg)
+  end
+end
+
+MCount.new.run(ARGV)
+
