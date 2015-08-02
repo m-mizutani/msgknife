@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+
+# MsgPack Prety Print
+class MGrep < Msgknife::Stream
+  def initialize
+    super
+    
+    @key = nil
+    @inv = false
+    @optpsr.on('-k VAL', 'target key name') { |v| @key = v }
+    @optpsr.on('-v', 'inverse') { |v| @inv = v }
+  end
+  
+  def setup(argv)
+    @val = argv[0]
+  end
+
+  def recv(obj, ts, tag)
+    if @key.nil?
+      obj.each do |k, v|
+        cond = (v.instance_of?(String) and v.scan(@val).size > 0)
+        if (cond ^ @inv)
+          write_stream(obj, ts, tag)
+          return
+        end
+      end
+    else
+      cond = (obj.has_key?(@key) and obj[@key].instance_of?(String) and
+              obj[@key].scan(@val).size > 0)
+      if (cond ^ @inv)
+        write_stream(obj, ts, tag)
+        return
+      end
+    end
+  end
+end
+
+ins = MGrep.new()
+ins.run(ARGV, 0..0)

@@ -52,6 +52,7 @@ class MDot < Msgknife::Stream
   def initialize
     super
     @node_map = Hash.new{|h,k| h[k] = Node.new(k)}
+    @optpsr.on('-s', 'shorten label') {|v| @shorten = true }
     @optpsr.on('-M val', 'size of minimum graph size') {|v| @min_size = v.to_i}
     @optpsr.on('-N', 'skip if value is nil') {|v| @skip_nil = v }
     @optpsr.on('-d', 'output as dot format') {|v| @out_dot = v }
@@ -88,6 +89,10 @@ class MDot < Msgknife::Stream
       @node_map.each do |key, node|
         next if ignore_set.include?(node.key)
         key = node.key.gsub('"', '\"')
+        if @shorten and key.size > 30
+          key = key[0,16] + '... (' + node.hkey[0,8] + ')'
+        end
+        
         case node.category
         when 0; color = '#fbeac1'
         when 1; color = '#ecac12'
@@ -95,11 +100,20 @@ class MDot < Msgknife::Stream
         puts "  \"#{node.hkey}\" [label=\"#{key}\" color=\"#{color}\" style=\"filled\"];"
       end
 
+      entity_count = 0
+      @node_map.each do |key1, node1|
+        next if ignore_set.include?(key1)
+        node1.fwd_link.each do |key2, node2|
+          entity_count += 1
+        end
+      end
+      arrow_len = Math.log10(entity_count) + 1
+      
       @node_map.each do |key1, node1|
         next if ignore_set.include?(key1)
         node1.fwd_link.each do |key2, node2|
           count = node1.fwd_count[key2]
-          puts "  \"#{node1.hkey}\" -> \"#{node2.hkey}\" [label=\"#{count}\" len=2.5];"
+          puts "  \"#{node1.hkey}\" -> \"#{node2.hkey}\" [label=\"#{count}\" len=#{arrow_len}];"
         end
       end
       puts "}"

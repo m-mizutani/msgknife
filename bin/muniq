@@ -1,0 +1,32 @@
+#!/usr/bin/env ruby
+
+require 'msgknife'
+require 'pp'
+
+# MsgPack Prety Print
+class MPP < Msgknife::Stream
+  def initialize
+    super
+    @key = nil
+    @optpsr.on('-k VAL', 'target key name') { |v| @key = v }
+  end
+  
+  def setup(argv)
+    @count_map = Hash.new {|h1,k1| h1[k1] = Hash.new {|h2,k2| h2[k2] = 0}}
+  end
+
+  def recv(obj, ts, tag)
+    obj.each do |k,v|
+      if @key.nil? or k == @key
+        @count_map[k][v] += 1
+      end
+    end
+  end
+
+  def teardown
+    write_stream(@count_map);
+  end
+end
+
+ins = MPP.new()
+ins.run(ARGV)
